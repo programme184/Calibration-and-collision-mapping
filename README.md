@@ -1,7 +1,8 @@
 # Calibration-and-collision-mapping
 
 ## Charuco calibration （ChArUco.py + realsense_img.py)
-### global variables
+### ChArUco.py
+#### global variables
 ```shell
 Dist = np.array([0.14574457705020905, -0.49072766304016113, 0.0002240741887362674, -0.00014576673856936395, 0.4482966661453247])  # system given
 
@@ -21,7 +22,7 @@ board = aruco.CharucoBoard_create(5, 7, 0.035, 0.021, aruco_dict)       # charuc
 结合上图和rostopic echo结果更改Dist, mtx
 
 size_of_marker由尺子测量得出
-### function/method
+#### function/method
 ```shell
 def charuco_pose_cam(img, charuco=True, draw=False):  # charuco=True, calibration by charuco board, otherwise: aruco markers
 def charuco_dataset(images, charuco=True)
