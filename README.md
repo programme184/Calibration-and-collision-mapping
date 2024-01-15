@@ -20,7 +20,7 @@ board = aruco.CharucoBoard_create(5, 7, 0.035, 0.021, aruco_dict)       # charuc
 ![image](https://github.com/programme184/Notes/assets/118700233/7f9f40f2-71a6-47ae-a3a7-b4adcd6189a3)
 结合上图和rostopic echo结果更改Dist, mtx
 
-size_of_marker有尺子测量得出
+size_of_marker由尺子测量得出
 ### function/method
 ```shell
 def charuco_pose_cam(img, charuco=True, draw=False):  # charuco=True, calibration by charuco board, otherwise: aruco markers
