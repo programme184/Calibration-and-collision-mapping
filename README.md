@@ -1,6 +1,17 @@
 # Calibration-and-collision-mapping
 
 ## Charuco calibration （ChArUco.py + realsense_img.py)
+```shell
+cd ~/catkin_ws
+source ./devel/setup.sh
+roslaunch jaka_ros_driver start.launch
+rosrun control_msgs jaka5_server
+roslaunch jaka5_config demo.launch
+roslaunch realsense2_camera rs_camera.launch
+python realsense_img.py
+roslaunch jaka_control calib.launch
+python ChArUco.py
+```
 ### ChArUco.py
 #### global variables
 ```shell
@@ -63,6 +74,16 @@ int points_num =10;
 修改完后catkin_make工作空间编译C++文件
 
 ## collision object adding (mapping.py + realsense_img.py)
+```shell
+cd ~/catkin_ws
+source ./devel/setup.sh
+roslaunch jaka_ros_driver start.launch
+rosrun control_msgs jaka5_server
+roslaunch jaka5_config demo.launch
+roslaunch realsense2_camera rs_camera.launch
+python realsense_img.py
+python mapping.py
+```
 ### mapping.py
 ```
 p_front = [-0.08115254138234, -0.6977417850855295, 0.5424513589271386]#[-0.00012388227045280475, -0.7117525244097773, 0.5372345966719493]
