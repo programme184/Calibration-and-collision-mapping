@@ -10,6 +10,10 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from geometry_msgs.msg import PoseStamped
 import shape_msgs.msg
+from robot_msgs.msg import RobotMsg
+
+
+
 
 class ManiControl:
     moveit_commander.roscpp_initialize(sys.argv)
@@ -20,9 +24,6 @@ class ManiControl:
 
     move_group = moveit_commander.MoveGroupCommander("manipulator")
 
-    # display_trajectory_publisher = rospy.Publisher(
-#                                       '/move_group/display_planned_path',
-#                                     moveit_msgs.msg.DisplayTrajectory)
     end_effector_link = move_group.get_end_effector_link()
     
     move_group.set_pose_reference_frame(reference_frame)
@@ -33,27 +34,24 @@ class ManiControl:
     # 设置位置（单位：米）和姿态（单位：弧度）的允许误差
     move_group.set_goal_position_tolerance(0.001)
     move_group.set_goal_orientation_tolerance(0.01)
+    move_group.set_goal_joint_tolerance(0.001)
 
+    
     # 设置允许的最大速度和加速度
     move_group.set_max_acceleration_scaling_factor(0.5)
     move_group.set_max_velocity_scaling_factor(0.2)
     
-    
+    robot_state_msg = RobotMsg()
     
     def info_get(self):
-        # print("============ Printing robot state")
-        # state_all = robot.get_current_state()
-        # print(state_all)
-        # print("============")
-        # robot position
+
         end_effector_link = self.move_group.get_end_effector_link()
         current_pose = self.move_group.get_current_pose(end_effector_link).pose
-        px, py, pz = current_pose.position.x, current_pose.position.y, current_pose.position.z
-        ox, oy, oz, ow = current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w
-        position = [px, py, pz]
-        orientation = [ox, oy, oz, ow]
+        position = [current_pose.position.x, current_pose.position.y, current_pose.position.z]
+        orientation = [current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w]
         # print("position:", position)
         # print("Orientation:", orientation)
+        # ref_state = self.robot.get_current_state()
         
         return position, orientation
         
@@ -71,7 +69,6 @@ class ManiControl:
         # planning to a pose goal
         pose_target = geometry_msgs.msg.Pose()
         if o is not None:
-            
             pose_target.orientation.x = o[0]
             pose_target.orientation.y = o[1]
             pose_target.orientation.z = o[2]
@@ -79,6 +76,8 @@ class ManiControl:
         pose_target.position.x = p[0]
         pose_target.position.y = p[1]
         pose_target.position.z = p[2]
+        
+
         self.move_group.set_pose_target(pose_target)
         plan1 = self.move_group.plan()
         time.sleep(2)
@@ -88,7 +87,69 @@ class ManiControl:
             time.sleep(3)
         else:
             rospy.logerr("Move fail")
+            
+        tolerance = self.move_group.get_goal_position_tolerance()
+        break_outer_loop = False
+        while True:
+            state_msg = self.robot_state_msg.state
+            print('state_msg', state_msg)
+            if state_msg == 0:
+                # break
+                current_positions, _ = self.info_get()
+
+                for current_state, expected_state in zip(current_positions, p):
+                    joint_error = abs(current_state - expected_state)
+                    if joint_error > tolerance:
+                        # print(f"Joint deviation exceeds tolerance: {joint_error}")
+                        self.move_group.set_pose_target(pose_target)
+                        self.move_group.go()
+                        time.sleep(3)
+                    else:
+                        break_outer_loop = True
+                        break
+                if break_outer_loop:
+                    break
     
+    
+    def joint_values(self):
+        
+        joints_val =  self.move_group.get_current_joint_values()
+
+        # joints_name = self.move_group.get_joints()
+        
+        
+        return joints_val
+    
+    
+    def set_joints_values(self, joints_values):
+        self.move_group.set_joint_value_target(joints_values)
+        
+        self.move_group.go()
+        time.sleep(5)
+        
+        self.state_feedback(joints_values, 'joint')
+        
+        tolerance = self.move_group.get_goal_joint_tolerance()
+        break_outer_loop = False
+        while True:
+            state_msg = self.robot_state_msg.state
+            print('state_msg', state_msg)
+            if state_msg == 0:
+                # break
+                current_joint_positions = self.move_group.get_current_joint_values()
+
+                for current_joint, expected_joint in zip(current_joint_positions, joints_values):
+                    joint_error = abs(current_joint - expected_joint)
+                    if joint_error > tolerance:
+                        # print(f"Joint deviation exceeds tolerance: {joint_error}")
+                        self.move_group.set_joint_value_target(joints_values)
+                        self.move_group.go()
+                        time.sleep(3)
+                    else:
+                        break_outer_loop = True
+                        break
+                if break_outer_loop:
+                    break
 
     def create_object(self, obj_size, obj_pose, name):
         # We can get the name of the reference frame for this robot:
@@ -123,11 +184,11 @@ class ManiControl:
         # Set the start state to the current state of the robot
         self.move_group.set_start_state(self.robot.get_current_state())
 
-# print("============ Starting tutorial setup")
 # robot_control = ManiControl()
-# # # # # robot_control.back_home()
-# position, orientation = robot_control.info_get()
-# print('position:', position, '\norientation:', orientation)
+# robot_control.joint_values()
+# # # # # # robot_control.back_home()
+# # position, orientation = robot_control.info_get()
+# # print('position:', position, '\norientation:', orientation)
 
 
 # p_front = [-0.08115254138234, -0.6977417850855295, 0.5424513589271386]#[-0.00012388227045280475, -0.7117525244097773, 0.5372345966719493]
@@ -136,11 +197,13 @@ class ManiControl:
 # p_back = [-0.26334396408811883, -0.31816837232143014, 0.5439693594084783]#[-0.031532668333874976, -0.5041097953656779, 0.6133438658758624]
 # o_back = [-0.9543479651433987, 0.18297553888233284, -0.11195362619907073, 0.20786124982365767]#[-0.9967489144080584, -0.051729046796425246, -0.008115452927891325, 0.0612359924200282]
     
-    
-# # robot_control.pos_assume(p_front, o_front)
-# # time.sleep(15)
+# if __name__ == '__main__':
+# robot_control.pos_assume(p_front, o_front)
+# time.sleep(15)
+# robot_control.joint_values()
 # robot_control.pos_assume(p_back, o_back)
 # time.sleep(10)
+# robot_control.joint_values()
         
 
 
