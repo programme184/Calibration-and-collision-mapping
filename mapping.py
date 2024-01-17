@@ -17,7 +17,7 @@ from scipy.spatial.transform import Rotation
 import os
 from realsense_img import ros_camera
 from aruco_detec_pose_estimate import aruco_pose
-
+from moveit_python.planning_scene_interface import PlanningSceneInterface
 from general_fun import table_cal
 
 # Dist = np.array([0.14574457705020905, -0.49072766304016113, 0.0002240741887362674, -0.00014576673856936395, 0.4482966661453247])  # system given
@@ -110,11 +110,16 @@ class ArucoMapping:
         
 
     @staticmethod
-    def collision_obj(point, orien, obj_size, obj_name):
+    def collision_obj(point, orien, obj_size, obj_name, obj_color=[1.0, 0.0, 0.0]):
+        scene2= PlanningSceneInterface("dummy")
         obj_pose = {}
         obj_pose['position']=point
         obj_pose['orientation']=orien  #xyzw
         robot_control.create_object(obj_size, obj_pose, obj_name)
+        [obj_r, obj_g, obj_b] = obj_color
+        scene2.setColor(obj_name, obj_r, obj_g, obj_b)
+        scene2.sendColors()
+
     
     @staticmethod
     def world_pose(image, aruco_dict, ar_size=0.05):
@@ -124,7 +129,7 @@ class ArucoMapping:
         arucopose.PoseEstimate(image, aruco_dict, aruco_size=ar_size)
         end_position, end_orientation = robot_control.info_get()
         translation = arucopose.to_wordcoord(end_position, end_orientation)
-        print('translation:', translation)
+        # print('translation:', translation)
         return translation
         
     def table_mapping(self):
@@ -188,6 +193,7 @@ class ArucoMapping:
         filepath = os.path.join(collision_path, filename)
 
         aruco_square = 0.022
+        aruco_color = [0.0, 0.0, 1.0]
         column_name = ['name', 'width', 'length','height', 'center x', 'center y', 'center z']
         aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         time.sleep(2)
@@ -210,7 +216,7 @@ class ArucoMapping:
 
             
             # #===== add collision object====
-            ArucoMapping.collision_obj(point, orien, obj_size, row_name)
+            ArucoMapping.collision_obj(point, orien, obj_size, row_name, obj_color=aruco_color)
             
         ArucoMapping.csv_save(csv_row)
     
